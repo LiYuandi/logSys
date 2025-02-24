@@ -12,11 +12,8 @@
 #include <iomanip>
 #include <map>
 #include <cstdarg>  // 包含 va_list 和相关函数
-
-class Logger;
-
-
-#define LOG(level, format, ...) Logger::getInstance().log(level, format, __FILE__, __LINE__, ##__VA_ARGS__)
+#include <vector>
+#include <filesystem>
 
 
 
@@ -27,6 +24,7 @@ namespace fs = std::filesystem;
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
 #endif
+
 
 enum LogLevel_en
 {
@@ -53,6 +51,7 @@ public:
 
 private:
     Logger(const std::string& path, const std::string& name, size_t maxFileSize = 1024 * 1024, size_t maxFileCount = 5);
+    void checkAndCreateLogDirectory();  // 检查并创建日志目录
     std::string getLogLevelString(LogLevel_en level);
     void checkFileSize();
     void rotateLogs();
@@ -70,6 +69,5 @@ private:
         {ERROR, "ERROR"}, {FATAL, "FATAL"}
     };
 };
-
 
 #endif // SIMPLE_FILE_SYSTEM_H

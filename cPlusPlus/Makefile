@@ -2,7 +2,7 @@
 CXX = g++
 
 # 编译选项
-CXXFLAGS = -Wall -Wextra -std=c++11  # 或者 -std=c++20
+CXXFLAGS = -Wall -Wextra -std=c++11 
 
 # 目标文件
 TARGET = logger

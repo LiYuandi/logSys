@@ -1,10 +1,9 @@
 #include "Logger.h"
 
-
 Logger::Logger(const std::string& path, const std::string& name, size_t maxFileSize, size_t maxFileCount)
     : logPath(path), logName(name), maxFileSize(maxFileSize), maxFileCount(maxFileCount)
 {
-    fs::create_directories(logPath);
+    checkAndCreateLogDirectory();  // 确保路径存在
     currentFilePath = logPath / (logName + ".log");
 
     outFile.open(currentFilePath, std::ios::app);
@@ -20,47 +19,50 @@ Logger& Logger::getInstance(const std::string& path, const std::string& name, si
     return instance;
 }
 
-// void Logger::log(LogLevel_en level, const std::string& format, const char* file, int line, ...)
-// {
-//     std::lock_guard<std::mutex> lock(mutex);
-
-//     // 使用 va_list 来获取可变参数
-//     va_list args;
-//     va_start(args, line);  // line 是最后一个命名参数
-//     char buffer[1024];
-//     vsnprintf(buffer, sizeof(buffer), format.c_str(), args);
-//     va_end(args);
-
-//     std::string message(buffer);
-
-//     outFile << "[" << getCurrentTimeString() << "]"
-//             << "[" << getLogLevelString(level) << "]"
-//             << "[" << file << ":" << line << "] "
-//             << message << std::endl;
-
-//     checkFileSize();
-// }
+void Logger::checkAndCreateLogDirectory()
+{
+    std::error_code ec;
+    if (!fs::exists(logPath))
+    {
+        if (!fs::create_directories(logPath, ec))
+        {
+            throw std::runtime_error("Failed to create log directory: " + logPath.string());
+        }
+    }
+    else if (ec)
+    {
+        throw std::runtime_error("Error accessing log directory: " + logPath.string());
+    }
+}
 
 void Logger::log(LogLevel_en level, const std::string& format, const char* file, int line, ...)
 {
     std::lock_guard<std::mutex> lock(mutex);
 
-    // 如果没有额外参数，可以直接处理格式化字符串
-    if (format.empty()) {
-        outFile << "[" << getCurrentTimeString() << "]"
-                << "[" << getLogLevelString(level) << "]"
-                << "[" << file << ":" << line << "] "
-                << format << std::endl;
-        return;
+    // 如果文件流无效，则重新打开文件
+    if (!outFile.is_open()) {
+        outFile.open(currentFilePath, std::ios::app);
+        if (!outFile) {
+            std::cerr << "Failed to open log file for writing: " << currentFilePath << std::endl;
+            return;  // 或者可以选择抛出异常
+        }
     }
 
     va_list args;
-    va_start(args, line);  // line 是最后一个命名参数
-    char buffer[1024];
-    vsnprintf(buffer, sizeof(buffer), format.c_str(), args);
+    va_start(args, line);
+
+    // 使用 std::vector 动态分配足够大的缓冲区
+    std::vector<char> buffer(1024);  // 初始大小 1024 字节，之后会根据需要扩展
+
+    int len = vsnprintf(buffer.data(), buffer.size(), format.c_str(), args);
+    if (static_cast<std::vector<char>::size_type>(len) >= buffer.size()) {  // 如果格式化后内容超出了缓冲区大小
+        buffer.resize(len + 1);  // 动态扩展缓冲区
+        vsnprintf(buffer.data(), buffer.size(), format.c_str(), args);  // 重新格式化
+    }
+
     va_end(args);
 
-    std::string message(buffer);
+    std::string message(buffer.data());
 
     outFile << "[" << getCurrentTimeString() << "]"
             << "[" << getLogLevelString(level) << "]"
@@ -78,14 +80,18 @@ void Logger::log(LogLevel_en level, const std::string& format, ...)
     va_list args;
     va_start(args, format);
 
-    // 格式化日志消息
-    char buffer[1024];  // 足够大以容纳格式化的字符串
-    vsnprintf(buffer, sizeof(buffer), format.c_str(), args);
+    // 使用 std::vector 动态分配足够大的缓冲区
+    std::vector<char> buffer(1024);
 
-    // 结束 va_list 使用
+    int len = vsnprintf(buffer.data(), buffer.size(), format.c_str(), args);
+    if (static_cast<std::vector<char>::size_type>(len) >= buffer.size()) {  // 如果格式化后内容超出了缓冲区大小
+        buffer.resize(len + 1);  // 动态扩展缓冲区
+        vsnprintf(buffer.data(), buffer.size(), format.c_str(), args);  // 重新格式化
+    }
+
     va_end(args);
 
-    std::string message(buffer);
+    std::string message(buffer.data());
     std::string timestamp = getCurrentTimeString();
 
     outFile << "[" << timestamp << "]"
@@ -112,11 +118,51 @@ void Logger::checkFileSize()
     }
 }
 
+// void Logger::rotateLogs()
+// {
+//     std::lock_guard<std::mutex> lock(mutex);
+//     std::queue<fs::path> logFiles;
+
+//     for (const auto& entry : fs::directory_iterator(logPath))
+//     {
+//         if (fs::is_regular_file(entry) && entry.path().filename().string().find(logName) != std::string::npos)
+//         {
+//             logFiles.push(entry.path());
+//         }
+//     }
+
+//     while (logFiles.size() >= maxFileCount)
+//     {
+//         fs::remove(logFiles.front());
+//         logFiles.pop();
+//     }
+
+//     int newFileIndex = 1;
+//     fs::path newFilePath;
+//     do
+//     {
+//         newFilePath = logPath / (logName + "_" + std::to_string(newFileIndex) + ".log");
+//         newFileIndex++;
+//     } while (fs::exists(newFilePath));
+
+//     fs::rename(currentFilePath, newFilePath);
+//     currentFilePath = logPath / (logName + ".log");
+
+//     outFile.close();
+//     outFile.open(currentFilePath, std::ios::app);
+//     if (!outFile)
+//     {
+//         throw std::runtime_error("Failed to reopen log file after rotation: " + currentFilePath.string());
+//     }
+// }
+
+
 void Logger::rotateLogs()
 {
     std::lock_guard<std::mutex> lock(mutex);
     std::queue<fs::path> logFiles;
 
+    // 收集所有日志文件
     for (const auto& entry : fs::directory_iterator(logPath))
     {
         if (fs::is_regular_file(entry) && entry.path().filename().string().find(logName) != std::string::npos)
@@ -125,27 +171,34 @@ void Logger::rotateLogs()
         }
     }
 
-
-    
-
-
+    // 删除最旧的日志文件，确保文件数不超过 maxFileCount
     while (logFiles.size() >= maxFileCount)
     {
         fs::remove(logFiles.front());
         logFiles.pop();
     }
 
+    // 创建新的日志文件
     int newFileIndex = 1;
     fs::path newFilePath;
     do
     {
         newFilePath = logPath / (logName + "_" + std::to_string(newFileIndex) + ".log");
         newFileIndex++;
-    } while (fs::exists(newFilePath));
+    } while (fs::exists(newFilePath));  // 检查文件是否存在
 
-    fs::rename(currentFilePath, newFilePath);
+    // 确保当前日志文件可以正常重命名
+    try {
+        fs::rename(currentFilePath, newFilePath);
+    } 
+    catch (const fs::filesystem_error& e) {
+        std::cerr << "Error renaming log file: " << e.what() << std::endl;
+        return;
+    }
+
     currentFilePath = logPath / (logName + ".log");
 
+    // 重新打开日志文件
     outFile.close();
     outFile.open(currentFilePath, std::ios::app);
     if (!outFile)
