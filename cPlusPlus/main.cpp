@@ -6,14 +6,13 @@
 int main() {
     LOG_INIT("logs", "log",  1024, 5);
     int i = 0;
-    while (i < 1*1*1024)
+    while (i < 1*1024*1024)
     {
         LOG(INFO, "Hello World %d" ,i);
         i++;
-        usleep(100);
+        usleep(10);
     }
     
-
-    LOG(INFO, "Hello World");
     return 0;
 }
+

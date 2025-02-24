@@ -15,6 +15,10 @@
 #include <vector>
 #include <filesystem>
 
+#include <algorithm>  // 引入 std::sort
+#include <cctype>     // 引入 std::isdigit
+#include <stdexcept>  // 引入 std::invalid_argument
+
 
 
 #if __cplusplus >= 201703L

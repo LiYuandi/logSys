@@ -118,36 +118,140 @@ void Logger::checkFileSize()
     }
 }
 
+// void Logger::rotateLogs()
+// {
+//     std::lock_guard<std::mutex> lock(mutex);
+//     std::queue<fs::path> logFiles;
+
+//     for (const auto& entry : fs::directory_iterator(logPath))
+//     {
+//         if (fs::is_regular_file(entry) && entry.path().filename().string().find(logName) != std::string::npos)
+//         {
+//             logFiles.push(entry.path());
+//         }
+//     }
+
+//     while (logFiles.size() >= maxFileCount)
+//     {
+//         fs::remove(logFiles.front());
+//         logFiles.pop();
+//     }
+
+//     int newFileIndex = 1;
+//     fs::path newFilePath;
+//     do
+//     {
+//         newFilePath = logPath / (logName + "_" + std::to_string(newFileIndex) + ".log");
+//         newFileIndex++;
+//     } while (fs::exists(newFilePath));
+
+//     fs::rename(currentFilePath, newFilePath);
+//     currentFilePath = logPath / (logName + ".log");
+
+//     outFile.close();
+//     outFile.open(currentFilePath, std::ios::app);
+//     if (!outFile)
+//     {
+//         throw std::runtime_error("Failed to reopen log file after rotation: " + currentFilePath.string());
+//     }
+// }
+
+
 void Logger::rotateLogs()
 {
     std::lock_guard<std::mutex> lock(mutex);
-    std::queue<fs::path> logFiles;
 
+    // 获取所有日志文件
+    std::vector<fs::path> logFiles;
     for (const auto& entry : fs::directory_iterator(logPath))
     {
         if (fs::is_regular_file(entry) && entry.path().filename().string().find(logName) != std::string::npos)
         {
-            logFiles.push(entry.path());
+            logFiles.push_back(entry.path());
         }
     }
 
+    // 根据文件名后缀排序文件（比如 log_1.log -> log_2.log）
+    std::sort(logFiles.begin(), logFiles.end(), [this](const fs::path& a, const fs::path& b)
+    {
+        auto aSuffix = a.filename().string();
+        auto bSuffix = b.filename().string();
+
+        // 提取后缀部分（去除扩展名）
+        std::string aNumStr = aSuffix;
+        std::string bNumStr = bSuffix;
+
+        // 处理 log.log 文件
+        if (aSuffix == logName + ".log") aNumStr = "0";
+        if (bSuffix == logName + ".log") bNumStr = "0";
+
+        // 提取数字部分
+        size_t dotPosA = aNumStr.find(".log");
+        size_t dotPosB = bNumStr.find(".log");
+        if (dotPosA != std::string::npos) aNumStr = aNumStr.substr(0, dotPosA);
+        if (dotPosB != std::string::npos) bNumStr = bNumStr.substr(0, dotPosB);
+
+        // 提取 _ 后的数字部分
+        size_t underscorePosA = aNumStr.find_last_of('_');
+        size_t underscorePosB = bNumStr.find_last_of('_');
+        if (underscorePosA != std::string::npos) aNumStr = aNumStr.substr(underscorePosA + 1);
+        if (underscorePosB != std::string::npos) bNumStr = bNumStr.substr(underscorePosB + 1);
+
+        // 确保后缀部分是纯数字
+        if (aNumStr.empty() || bNumStr.empty() || aNumStr.find_first_not_of("0123456789") != std::string::npos || bNumStr.find_first_not_of("0123456789") != std::string::npos)
+        {
+            std::cerr << "Non-numeric suffix detected: " << aSuffix << " or " << bSuffix << std::endl;
+            return aSuffix < bSuffix;  // 非数字后缀时，按字母排序
+        }
+
+        // 安全转换为数字
+        int aNum = std::stoi(aNumStr);
+        int bNum = std::stoi(bNumStr);
+
+        return aNum < bNum;
+    });
+
+    // 删除最大后缀的文件，保留文件数量小于 maxFileCount
     while (logFiles.size() >= maxFileCount)
     {
-        fs::remove(logFiles.front());
-        logFiles.pop();
+        fs::remove(logFiles.back());
+        logFiles.pop_back();
     }
 
-    int newFileIndex = 1;
-    fs::path newFilePath;
-    do
+    // 重命名文件并更新后缀
+    for (auto it = logFiles.rbegin(); it != logFiles.rend(); ++it)
     {
-        newFilePath = logPath / (logName + "_" + std::to_string(newFileIndex) + ".log");
-        newFileIndex++;
-    } while (fs::exists(newFilePath));
+        fs::path oldFilePath = *it;
+        std::string oldFileName = oldFilePath.filename().string();
 
+        // 提取数字部分
+        size_t underscorePos = oldFileName.find_last_of('_');
+        std::string numStr = oldFileName.substr(underscorePos + 1, oldFileName.find(".log") - underscorePos - 1);
+
+        // 检查 numStr 是否为空或非数字
+        if (numStr.empty() || numStr.find_first_not_of("0123456789") != std::string::npos)
+        {
+            // std::cerr << "Invalid numeric suffix detected: " << oldFileName << std::endl;
+            continue;  // 跳过无效文件
+        }
+
+        int num = std::stoi(numStr);
+
+        // 生成新的文件名
+        fs::path newFilePath = logPath / (logName + "_" + std::to_string(num + 1) + ".log");
+
+        // 重命名文件
+        fs::rename(oldFilePath, newFilePath);
+    }
+
+    // 重命名当前日志文件为 log_1.log
+    fs::path newFilePath = logPath / (logName + "_1.log");
     fs::rename(currentFilePath, newFilePath);
+
+    // 更新当前日志文件路径
     currentFilePath = logPath / (logName + ".log");
 
+    // 重新打开日志文件
     outFile.close();
     outFile.open(currentFilePath, std::ios::app);
     if (!outFile)
@@ -155,7 +259,6 @@ void Logger::rotateLogs()
         throw std::runtime_error("Failed to reopen log file after rotation: " + currentFilePath.string());
     }
 }
-
 
 std::string Logger::getCurrentTimeString()
 {
