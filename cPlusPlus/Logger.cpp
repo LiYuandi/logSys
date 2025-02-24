@@ -118,51 +118,11 @@ void Logger::checkFileSize()
     }
 }
 
-// void Logger::rotateLogs()
-// {
-//     std::lock_guard<std::mutex> lock(mutex);
-//     std::queue<fs::path> logFiles;
-
-//     for (const auto& entry : fs::directory_iterator(logPath))
-//     {
-//         if (fs::is_regular_file(entry) && entry.path().filename().string().find(logName) != std::string::npos)
-//         {
-//             logFiles.push(entry.path());
-//         }
-//     }
-
-//     while (logFiles.size() >= maxFileCount)
-//     {
-//         fs::remove(logFiles.front());
-//         logFiles.pop();
-//     }
-
-//     int newFileIndex = 1;
-//     fs::path newFilePath;
-//     do
-//     {
-//         newFilePath = logPath / (logName + "_" + std::to_string(newFileIndex) + ".log");
-//         newFileIndex++;
-//     } while (fs::exists(newFilePath));
-
-//     fs::rename(currentFilePath, newFilePath);
-//     currentFilePath = logPath / (logName + ".log");
-
-//     outFile.close();
-//     outFile.open(currentFilePath, std::ios::app);
-//     if (!outFile)
-//     {
-//         throw std::runtime_error("Failed to reopen log file after rotation: " + currentFilePath.string());
-//     }
-// }
-
-
 void Logger::rotateLogs()
 {
     std::lock_guard<std::mutex> lock(mutex);
     std::queue<fs::path> logFiles;
 
-    // 收集所有日志文件
     for (const auto& entry : fs::directory_iterator(logPath))
     {
         if (fs::is_regular_file(entry) && entry.path().filename().string().find(logName) != std::string::npos)
@@ -171,34 +131,23 @@ void Logger::rotateLogs()
         }
     }
 
-    // 删除最旧的日志文件，确保文件数不超过 maxFileCount
     while (logFiles.size() >= maxFileCount)
     {
         fs::remove(logFiles.front());
         logFiles.pop();
     }
 
-    // 创建新的日志文件
     int newFileIndex = 1;
     fs::path newFilePath;
     do
     {
         newFilePath = logPath / (logName + "_" + std::to_string(newFileIndex) + ".log");
         newFileIndex++;
-    } while (fs::exists(newFilePath));  // 检查文件是否存在
+    } while (fs::exists(newFilePath));
 
-    // 确保当前日志文件可以正常重命名
-    try {
-        fs::rename(currentFilePath, newFilePath);
-    } 
-    catch (const fs::filesystem_error& e) {
-        std::cerr << "Error renaming log file: " << e.what() << std::endl;
-        return;
-    }
-
+    fs::rename(currentFilePath, newFilePath);
     currentFilePath = logPath / (logName + ".log");
 
-    // 重新打开日志文件
     outFile.close();
     outFile.open(currentFilePath, std::ios::app);
     if (!outFile)
@@ -206,6 +155,7 @@ void Logger::rotateLogs()
         throw std::runtime_error("Failed to reopen log file after rotation: " + currentFilePath.string());
     }
 }
+
 
 std::string Logger::getCurrentTimeString()
 {
