@@ -1,3 +1,5 @@
+#if 0
+
 #include "Logger1.h"
 
 // 构造函数
@@ -398,3 +400,5 @@ void Logger::checkFileSize()
         rotateLogs(); // 触发日志滚动
     }
 }
+
+#endif

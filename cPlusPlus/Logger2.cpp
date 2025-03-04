@@ -91,7 +91,7 @@ void Logger::log(LogLevel_en level, const std::string& format, const char* file,
         logEntry << "{"
                  << "\"timestamp\":\"" << getCurrentTimeString() << "\","
                  << "\"level\":\"" << getLogLevelString(level) << "\","
-                 << "\"file\":\"" << file << "\","
+                 << "\"file\":\"" << (file ? file : "unknown") << "\","
                  << "\"line\":" << line << ","
                  << "\"message\":\"" << message << "\""
                  << "}";
@@ -100,7 +100,7 @@ void Logger::log(LogLevel_en level, const std::string& format, const char* file,
     {
         logEntry << "[" << getCurrentTimeString() << "]"
                  << "[" << getLogLevelString(level) << "]"
-                 << "[" << file << ":" << line << "] "
+                 << "[" << (file ? file : "unknown") << ":" << line << "] "
                  << message;
     }
 

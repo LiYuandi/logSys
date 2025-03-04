@@ -1,6 +1,8 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
+#if 0
+
 #include <iostream>
 #include <fstream>
 #include <mutex>
@@ -154,5 +156,7 @@ private:
     std::string syslogIdent;               // syslog 标识
     int syslogFacility = LOG_USER;         // syslog 设施
 };
+
+#endif
 
 #endif // LOGGER_H
