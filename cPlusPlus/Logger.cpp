@@ -1,3 +1,4 @@
+/*
 #include "Logger.h"
 
 Logger::Logger(const std::string& path, const std::string& name, size_t maxFileSize, size_t maxFileCount)
@@ -13,11 +14,13 @@ Logger::Logger(const std::string& path, const std::string& name, size_t maxFileS
     }
 }
 
+
 Logger& Logger::getInstance(const std::string& path, const std::string& name, size_t maxFileSize, size_t maxFileCount)
 {
     static Logger instance(path, name, maxFileSize, maxFileCount);
     return instance;
 }
+
 
 void Logger::checkAndCreateLogDirectory()
 {
@@ -72,6 +75,36 @@ void Logger::log(LogLevel_en level, const std::string& format, const char* file,
     checkFileSize();
 }
 
+
+void Logger::log(LogLevel_en level, const std::string& format, const char* file, int line, ...) {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (!logLevelEnabled[level]) return;
+    
+    va_list args;
+    va_start(args, line);
+    std::vector<char> buffer(1024);
+    int len = vsnprintf(buffer.data(), buffer.size(), format.c_str(), args);
+    if (static_cast<size_t>(len) >= buffer.size()) {
+        buffer.resize(len + 1);
+        vsnprintf(buffer.data(), buffer.size(), format.c_str(), args);
+    }
+    va_end(args);
+
+    std::string message(buffer.data());
+    std::ostringstream logStream;
+    logStream << "[" << getCurrentTimeString() << "]"
+              << "[" << getLogLevelString(level) << "]"
+              << "[" << file << ":" << line << "] "
+              << message;
+
+    if (consoleOutput) {
+        std::cout << logStream.str() << std::endl;
+    }
+    outFile << logStream.str() << std::endl;
+    checkFileSize();
+}
+
+
 void Logger::log(LogLevel_en level, const std::string& format, ...)
 {
     std::lock_guard<std::mutex> lock(mutex);
@@ -117,44 +150,6 @@ void Logger::checkFileSize()
         rotateLogs();
     }
 }
-
-// void Logger::rotateLogs()
-// {
-//     std::lock_guard<std::mutex> lock(mutex);
-//     std::queue<fs::path> logFiles;
-
-//     for (const auto& entry : fs::directory_iterator(logPath))
-//     {
-//         if (fs::is_regular_file(entry) && entry.path().filename().string().find(logName) != std::string::npos)
-//         {
-//             logFiles.push(entry.path());
-//         }
-//     }
-
-//     while (logFiles.size() >= maxFileCount)
-//     {
-//         fs::remove(logFiles.front());
-//         logFiles.pop();
-//     }
-
-//     int newFileIndex = 1;
-//     fs::path newFilePath;
-//     do
-//     {
-//         newFilePath = logPath / (logName + "_" + std::to_string(newFileIndex) + ".log");
-//         newFileIndex++;
-//     } while (fs::exists(newFilePath));
-
-//     fs::rename(currentFilePath, newFilePath);
-//     currentFilePath = logPath / (logName + ".log");
-
-//     outFile.close();
-//     outFile.open(currentFilePath, std::ios::app);
-//     if (!outFile)
-//     {
-//         throw std::runtime_error("Failed to reopen log file after rotation: " + currentFilePath.string());
-//     }
-// }
 
 
 void Logger::rotateLogs()
@@ -271,3 +266,5 @@ std::string Logger::getCurrentTimeString()
         << "." << std::setw(3) << std::setfill('0') << now_ms.count();
     return oss.str();
 }
+
+*/

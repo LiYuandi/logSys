@@ -1,6 +1,7 @@
 #ifndef LOG_H
 #define LOG_H
 
+/*
 #include "Logger.h"
 
 
@@ -9,6 +10,6 @@
 
 #define LOG(level, format, ...) \
     Logger::getInstance().log(level, format, __FILE__, __LINE__, ##__VA_ARGS__)
-
+*/
 
 #endif // LOG_H

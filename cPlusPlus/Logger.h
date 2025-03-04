@@ -1,6 +1,6 @@
 #ifndef SIMPLE_FILE_SYSTEM_H
 #define SIMPLE_FILE_SYSTEM_H
-
+/*
 #include <iostream>
 #include <fstream>
 #include <mutex>
@@ -73,5 +73,9 @@ private:
         {ERROR, "ERROR"}, {FATAL, "FATAL"}
     };
 };
+
+
+*/
+
 
 #endif // SIMPLE_FILE_SYSTEM_H

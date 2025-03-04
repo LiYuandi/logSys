@@ -2,7 +2,7 @@
 CXX = g++
 
 # 编译选项
-CXXFLAGS = -Wall -Wextra -std=c++11 
+CXXFLAGS = -Wall -Wextra -std=c++11  -pthread -lz
 
 # 目标文件
 TARGET = logger
@@ -15,7 +15,7 @@ all: $(TARGET)
 
 # 链接目标文件生成可执行文件
 $(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ -lstdc++fs  # 添加 -lstdc++fs
+	$(CXX) $(CXXFLAGS) -o $@ $^ -lstdc++fs  -lz # 添加 -lstdc++fs
 
 # 编译源文件生成目标文件
 %.o: %.cpp
