@@ -8,12 +8,12 @@ int main() {
     
     // 基本配置
     logger.setLogPath("logs");
-    logger.setMaxFileSize(10 * 1024); // 10MB
-    logger.setMaxFileCount(3);
+    logger.setMaxFileSize(1*1024* 1024); // 10MB
+    logger.setMaxFileCount(5);
 
     // 高级功能
     logger.setTimePrecision(MILLISECONDS);
-    logger.enableLogCompression(true);
+    logger.enableLogCompression(false);
     logger.setMaxCompressedFiles(20);
     // logger.enableRemoteLogging("192.168.1.100", 514);
     logger.setOutputToConsole(true);
@@ -23,7 +23,7 @@ int main() {
     // logger.log(DEBUG, "Sensor value: %.2f", __FILE__, __LINE__, 3.14159);
 
     // 记录大量日志以触发滚动
-    for (int i = 0; i < 2000; ++i) {
+    for (int i = 0; i < 20000; ++i) {
         logger.log(INFO, "Test log entry %d", __FILE__, __LINE__, i);
         // usleep(10);
     }

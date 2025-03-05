@@ -165,6 +165,8 @@ void Logger::writeThreadFunc() {
     }
 }
 
+
+
 // 压缩线程函数
 void Logger::compressThreadFunc() {
     while (compressRunning || !compressQueue.empty()) {
@@ -281,6 +283,7 @@ void Logger::rotateLogs() {
 
     std::cerr << "Log rotation completed. New log file created: " << currentFilePath << std::endl;
 }
+
 // 压缩文件
 void Logger::compressFile(const fs::path& filePath) {
     std::unique_lock<std::mutex> lock(compressMutex);
@@ -475,7 +478,6 @@ void Logger::checkFileSize() {
     std::error_code ec;
     size_t fileSize = fs::file_size(currentFilePath, ec);
     if (!ec && fileSize >= maxFileSize) {
-        // 只有在文件大小超过 maxFileSize 的 90% 时才触发滚动
         if (fileSize >= maxFileSize) {
             rotateLogs();
             if (compressLogs) {

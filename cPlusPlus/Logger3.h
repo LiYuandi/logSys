@@ -169,7 +169,7 @@ private:
     int syslogLevel = LOG_DEBUG;           // syslog 级别
 
     size_t maxCompressedFiles = 10;        // 最大压缩文件数量
-    size_t maxCompressedFileSize = 1024 * 1024; // 单个压缩文件最大大小
+    size_t maxCompressedFileSize = 1* 1024; // 单个压缩文件最大大小
     std::vector<fs::path> compressedFiles; // 压缩文件路径列表
 
     std::atomic<size_t> maxQueueSize{1000}; // 日志队列最大大小
