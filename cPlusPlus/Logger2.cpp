@@ -1,3 +1,5 @@
+#if 0
+
 #include "Logger2.h"
 
 // 构造函数
@@ -437,3 +439,5 @@ void Logger::setMaxCompressedFileSize(size_t maxCompressedFileSize)
     std::lock_guard<std::mutex> lock(mutex);
     this->maxCompressedFileSize = maxCompressedFileSize;
 }
+
+#endif

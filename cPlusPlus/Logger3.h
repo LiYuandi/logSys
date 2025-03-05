@@ -1,7 +1,5 @@
-#ifndef LOGGER2_H
-#define LOGGER2_H
-
-#if 0
+#ifndef LOGGER3_H
+#define LOGGER3_H
 
 #include <iostream>
 #include <fstream>
@@ -20,11 +18,14 @@
 #include <memory>
 #include <sstream>
 #include <cstring>
+#include <functional>  
 #include <zlib.h>       // 用于 gzip 压缩
 #include <sys/socket.h> // 用于 TCP 远程日志
 #include <netinet/in.h> // 用于 TCP 远程日志
 #include <arpa/inet.h>  // 用于 TCP 远程日志
 #include <syslog.h>     // 用于 syslog 支持
+#include <fcntl.h>      // 用于文件锁
+#include <cstdarg>      // 用于变参处理
 
 #if __cplusplus >= 201703L
 #include <filesystem>
@@ -35,8 +36,7 @@ namespace fs = std::experimental::filesystem;
 #endif
 
 // 日志等级枚举
-enum LogLevel_en
-{
+enum LogLevel_en {
     DEBUG = 1,
     INFO,
     WARNING,
@@ -44,8 +44,15 @@ enum LogLevel_en
     FATAL
 };
 
-class Logger
-{
+// 时间精度枚举
+enum TimePrecision {
+    SECONDS,
+    MILLISECONDS,
+    MICROSECONDS,
+    NANOSECONDS
+};
+
+class Logger {
 public:
     // 获取单例实例
     static Logger& getInstance(const std::string& path = "/tmp/logs", const std::string& name = "app_log",
@@ -83,6 +90,12 @@ public:
     void enableRemoteLogging(const std::string& remoteIp, uint16_t remotePort);
     void enableSyslog(const std::string& ident, int facility, int syslogLevel);
 
+    // 设置日志队列最大大小
+    void setMaxQueueSize(size_t size);
+
+    // 设置时间戳精度
+    void setTimePrecision(TimePrecision precision);
+
     // 析构函数
     ~Logger();
 
@@ -110,6 +123,12 @@ private:
 
     // 日志写入线程函数
     void writeThreadFunc();
+
+    // 压缩线程函数
+    void compressThreadFunc();
+
+    // 远程日志线程函数
+    void remoteThreadFunc();
 
     // 写入日志到文件
     void writeToFile(const std::string& message);
@@ -152,10 +171,20 @@ private:
     size_t maxCompressedFiles = 10;        // 最大压缩文件数量
     size_t maxCompressedFileSize = 1024 * 1024; // 单个压缩文件最大大小
     std::vector<fs::path> compressedFiles; // 压缩文件路径列表
+
+    std::atomic<size_t> maxQueueSize{1000}; // 日志队列最大大小
+    std::atomic<bool> syslogInitialized{false}; // Syslog 是否已初始化
+    TimePrecision timePrecision = MILLISECONDS; // 时间戳精度
+
+    std::mutex compressMutex;              // 压缩任务队列互斥锁
+    std::condition_variable compressCV;    // 压缩任务条件变量
+    std::queue<std::function<void()>> compressQueue; // 压缩任务队列
+    std::thread compressThread;            // 压缩线程
+    std::atomic<bool> compressRunning{true}; // 压缩线程运行状态
+
+    std::queue<std::string> remoteQueue;   // 远程日志队列
+    std::thread remoteThread;              // 远程日志线程
+    std::atomic<bool> remoteRunning{true}; // 远程日志线程运行状态
 };
 
-
-#endif
-
-
-#endif // LOGGER2_H
+#endif // LOGGER3_H

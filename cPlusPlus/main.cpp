@@ -1,33 +1,32 @@
 #include<iostream>
 #include <unistd.h>
-#include "Logger2.h"
+#include "Logger3.h"
 
 int main() {
-    // 获取Logger2实例
-    Logger& logger = Logger::getInstance("logs", "app_log", 1024 * 1024, 5);
+    // 在 getInstance 中显式传递日志名称 "aplog"
+    Logger& logger = Logger::getInstance("/tmp/logs", "aplog", 10 * 1024, 3);
+    
+    // 基本配置
+    logger.setLogPath("logs");
+    logger.setMaxFileSize(10 * 1024); // 10MB
+    logger.setMaxFileCount(3);
 
-    // 启用日志压缩
+    // 高级功能
+    logger.setTimePrecision(MILLISECONDS);
     logger.enableLogCompression(true);
-    logger.setMaxCompressedFiles(10);
-    logger.setMaxCompressedFileSize(1024 * 1024);
-
-    // 设置日志输出到终端
+    logger.setMaxCompressedFiles(20);
+    // logger.enableRemoteLogging("192.168.1.100", 514);
     logger.setOutputToConsole(true);
 
-    logger.setJsonFormat(true);
+    // 记录日志
+    // logger.log(INFO, "System started. Version: %s", __FILE__, __LINE__, "1.4.2");
+    // logger.log(DEBUG, "Sensor value: %.2f", __FILE__, __LINE__, 3.14159);
 
-    // 设置日志输出到远程服务器（TCP）
-    // logger.enableRemoteLogging("127.0.0.1", 514);
-
-    // 设置日志输出到syslog
-    logger.enableSyslog("app_name", LOG_USER, LOG_DEBUG);
-
-    // 记录不同等级的日志
-    logger.log(DEBUG, "This is a debug message from %s at line %d", __FILE__, __LINE__, "123", 1);
-    logger.log(INFO, "This is an info message from %s at line %d", __FILE__, __LINE__, "123", 1);
-    logger.log(WARNING, "This is a warning message from %s at line %d", __FILE__, __LINE__, "123", 1);
-    logger.log(ERROR, "This is an error message from %s at line %d", __FILE__, __LINE__, "123", 1);
-    logger.log(FATAL, "This is a fatal message from %s at line %d", __FILE__, __LINE__, "123", 1);
+    // 记录大量日志以触发滚动
+    for (int i = 0; i < 2000; ++i) {
+        logger.log(INFO, "Test log entry %d", __FILE__, __LINE__, i);
+        // usleep(10);
+    }
 
     return 0;
 }
