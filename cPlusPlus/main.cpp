@@ -16,14 +16,14 @@ int main() {
     logger.enableLogCompression(false);
     logger.setMaxCompressedFiles(20);
     // logger.enableRemoteLogging("192.168.1.100", 514);
-    logger.setOutputToConsole(true);
+    logger.setOutputToConsole(false);
 
     // 记录日志
     // logger.log(INFO, "System started. Version: %s", __FILE__, __LINE__, "1.4.2");
     // logger.log(DEBUG, "Sensor value: %.2f", __FILE__, __LINE__, 3.14159);
 
     // 记录大量日志以触发滚动
-    for (int i = 0; i < 20000; ++i) {
+    for (int i = 0; i < 10000; ++i) {
         logger.log(INFO, "Test log entry %d", __FILE__, __LINE__, i);
         // usleep(10);
     }

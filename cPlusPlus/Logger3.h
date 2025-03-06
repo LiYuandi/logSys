@@ -153,6 +153,13 @@ private:
     size_t maxFileCount;                   // 最大日志文件数量
     std::ofstream outFile;                 // 文件输出流
 
+    
+    std::atomic<size_t> logEntryCounter{0}; // 日志条数计数器
+    double checkThreshold = 0.9;           // 文件大小比例阈值
+    size_t lowCheckInterval = 20;          // 低频率检查间隔
+    size_t highCheckInterval = 5;          // 高频率检查间隔
+    size_t cachedFileSize = 0;             // 缓存的文件大小
+
     std::bitset<5> logLevelEnabled = 0b11111; // 日志等级启用状态
 
     bool outputToConsole = false;          // 是否输出到终端
@@ -168,11 +175,13 @@ private:
     int syslogFacility = LOG_USER;         // syslog 设施
     int syslogLevel = LOG_DEBUG;           // syslog 级别
 
+
+
     size_t maxCompressedFiles = 10;        // 最大压缩文件数量
     size_t maxCompressedFileSize = 1* 1024; // 单个压缩文件最大大小
     std::vector<fs::path> compressedFiles; // 压缩文件路径列表
 
-    std::atomic<size_t> maxQueueSize{1000}; // 日志队列最大大小
+    std::atomic<size_t> maxQueueSize{2000}; // 日志队列最大大小
     std::atomic<bool> syslogInitialized{false}; // Syslog 是否已初始化
     TimePrecision timePrecision = MILLISECONDS; // 时间戳精度
 

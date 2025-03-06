@@ -165,6 +165,31 @@ void Logger::writeThreadFunc() {
     }
 }
 
+// void Logger::writeThreadFunc() {
+//     std::vector<std::string> batch;
+//     batch.reserve(100); // 每次批量处理 100 条日志
+
+//     while (running || !logQueue.empty()) {
+//         std::unique_lock<std::mutex> lock(mutex);
+//         cv.wait(lock, [this] { return !logQueue.empty() || !running; });
+
+//         // 批量取出日志消息
+//         while (!logQueue.empty() && batch.size() < 100) {
+//             batch.push_back(logQueue.front());
+//             logQueue.pop();
+//         }
+//         lock.unlock();
+
+//         if (!batch.empty()) {
+//             std::string combinedMessage;
+//             for (const auto& message : batch) {
+//                 combinedMessage += message + "\n";
+//             }
+//             outFile << combinedMessage;
+//             batch.clear();
+//         }
+//     }
+// }
 
 
 // 压缩线程函数
@@ -225,8 +250,23 @@ void Logger::remoteThreadFunc() {
 
 // 写入日志到文件
 void Logger::writeToFile(const std::string& message) {
+    // outFile << message << std::endl;
+    // checkFileSize(); // 检查文件大小并触发日志滚动
+
     outFile << message << std::endl;
-    checkFileSize(); // 检查文件大小并触发日志滚动
+
+    // 更新计数器
+    logEntryCounter++;
+
+    // 动态调整检查频率
+    if (logEntryCounter % (cachedFileSize < maxFileSize * checkThreshold ? lowCheckInterval : highCheckInterval) == 0) {
+        checkFileSize();
+    }
+
+    // 定期重置计数器
+    if (logEntryCounter >= 1000) {
+        logEntryCounter = 0;
+    }
 }
 
 // 写入日志到远程服务器
@@ -474,15 +514,29 @@ std::string Logger::getLogLevelString(LogLevel_en level) {
     }
 }
 
+// void Logger::checkFileSize() {
+//     std::error_code ec;
+//     size_t fileSize = fs::file_size(currentFilePath, ec);
+//     if (!ec && fileSize >= maxFileSize) {
+//         if (fileSize >= maxFileSize) {
+//             rotateLogs();
+//             if (compressLogs) {
+//                 compressFile(currentFilePath);
+//             }
+//         }
+//     }
+// }
+
 void Logger::checkFileSize() {
     std::error_code ec;
-    size_t fileSize = fs::file_size(currentFilePath, ec);
-    if (!ec && fileSize >= maxFileSize) {
-        if (fileSize >= maxFileSize) {
-            rotateLogs();
-            if (compressLogs) {
-                compressFile(currentFilePath);
-            }
-        }
+    cachedFileSize = fs::file_size(currentFilePath, ec);
+    if (ec) {
+        std::cerr << "Failed to get file size: " << ec.message() << std::endl;
+        return;
+    }
+
+    // 触发日志滚动
+    if (cachedFileSize >= maxFileSize) {
+        rotateLogs();
     }
 }
